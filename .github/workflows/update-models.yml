@@ -21,6 +21,17 @@ jobs:
       - name: Run model updater
         run: cargo run --bin update-models --features updater
 
+      - name: Validate generated models
+        id: validate
+        run: |
+          # Check that model arrays are not empty
+          VISION_COUNT=$(grep -c '"' src/generated.rs | head -1 || echo "0")
+          if [ "$VISION_COUNT" -lt 10 ]; then
+            echo "::error::Generated file appears to have too few models (found ~$VISION_COUNT). Aborting to prevent publishing empty package."
+            exit 1
+          fi
+          echo "Validation passed: found approximately $VISION_COUNT model entries"
+
       - name: Check for changes
         id: changes
         run: |
