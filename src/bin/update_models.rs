@@ -137,6 +137,14 @@ fn generate_rust_file(
     audio: &[String],
     timestamp: &str,
 ) -> String {
+    // Build ALL_MODELS as union of all lists
+    let mut all_models: Vec<&str> = Vec::new();
+    all_models.extend(vision.iter().map(|s| s.as_str()));
+    all_models.extend(text_only.iter().map(|s| s.as_str()));
+    all_models.extend(audio.iter().map(|s| s.as_str()));
+    all_models.sort();
+    all_models.dedup();
+
     let mut out = String::with_capacity(32_000);
 
     out.push_str(&format!(
@@ -186,9 +194,14 @@ pub const AUDIO_MODELS: &[&str] = &[
 
     out.push_str(
         r#"/// All known models (union of all lists).
-pub const ALL_MODELS: &[&str] = &[];
+pub const ALL_MODELS: &[&str] = &[
 "#,
     );
+
+    for model in &all_models {
+        out.push_str(&format!("    \"{}\",\n", model));
+    }
+    out.push_str("];\n");
 
     out
 }
