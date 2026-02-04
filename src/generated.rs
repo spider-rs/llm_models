@@ -45,6 +45,7 @@ pub const VISION_MODELS: &[&str] = &[
     "gemma-3-4b-it:free",
     "glm-4.5v",
     "glm-4.6v",
+    "glm-4.6v-flash",
     "gpt-4-turbo",
     "gpt-4.1",
     "gpt-4.1-mini",
