@@ -1,4 +1,4 @@
-//! # llm_models
+//! # llm_models_spider
 //!
 //! Auto-updated registry of LLM model capabilities.
 //!
@@ -9,7 +9,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use llm_models::{supports_vision, supports_audio, ModelCapabilities};
+//! use llm_models_spider::{supports_vision, supports_audio, ModelCapabilities};
 //!
 //! // Quick checks
 //! assert!(supports_vision("gpt-4o"));
@@ -112,7 +112,7 @@ impl ModelCapabilities {
 /// # Examples
 ///
 /// ```rust
-/// use llm_models::supports_vision;
+/// use llm_models_spider::supports_vision;
 ///
 /// assert!(supports_vision("gpt-4o"));
 /// assert!(supports_vision("claude-3-sonnet-20240229"));

@@ -1,7 +1,7 @@
-# llm_models
+# llm_models_spider
 
-[![Crates.io](https://img.shields.io/crates/v/llm_models.svg)](https://crates.io/crates/llm_models)
-[![Documentation](https://docs.rs/llm_models/badge.svg)](https://docs.rs/llm_models)
+[![Crates.io](https://img.shields.io/crates/v/llm_models_spider.svg)](https://crates.io/crates/llm_models_spider)
+[![Documentation](https://docs.rs/llm_models_spider/badge.svg)](https://docs.rs/llm_models_spider)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Auto-updated registry of LLM model capabilities (vision, audio, etc.).
@@ -17,13 +17,13 @@ Auto-updated registry of LLM model capabilities (vision, audio, etc.).
 
 ```toml
 [dependencies]
-llm_models = "0.1"
+llm_models_spider = "0.1"
 ```
 
 ## Usage
 
 ```rust
-use llm_models::{supports_vision, supports_audio, is_text_only, ModelCapabilities};
+use llm_models_spider::{supports_vision, supports_audio, is_text_only, ModelCapabilities};
 
 // Quick capability checks
 assert!(supports_vision("gpt-4o"));
@@ -78,7 +78,7 @@ For models not yet in OpenRouter, the library falls back to pattern matching:
 To manually update the model lists:
 
 ```bash
-cargo run --bin update-models
+cargo run --bin update-models --features updater
 ```
 
 ## License
