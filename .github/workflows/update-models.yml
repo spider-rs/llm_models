@@ -1,0 +1,68 @@
+name: Update Model Lists
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Run model updater
+        run: cargo run --bin update-models --features updater
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet src/generated.rs; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add src/generated.rs
+          git commit -m "chore: update model lists from OpenRouter API"
+          git push
+
+      - name: Bump version and publish
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          # Bump patch version
+          CURRENT_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+          # Update Cargo.toml
+          sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
+
+          # Commit version bump
+          git add Cargo.toml
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git push
+
+          # Create tag
+          git tag "v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+
+          # Publish to crates.io
+          cargo publish --allow-dirty

@@ -1,0 +1,46 @@
+[package]
+name = "llm_models"
+version = "0.1.0"
+authors = ["j-mendez <jeff@spider.cloud>"]
+description = "Auto-updated registry of LLM model capabilities (vision, audio, etc.)"
+repository = "https://github.com/spider-rs/llm_models"
+readme = "README.md"
+keywords = ["llm", "models", "vision", "multimodal", "ai"]
+categories = ["data-structures", "web-programming"]
+license = "MIT"
+documentation = "https://docs.rs/llm_models"
+edition = "2021"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+# No runtime dependencies - this is a zero-cost lookup crate
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "update-models"
+path = "src/bin/update_models.rs"
+required-features = ["updater"]
+
+[features]
+default = []
+updater = ["dep:reqwest", "dep:serde", "dep:serde_json"]
+
+[dependencies.reqwest]
+version = "0.12"
+features = ["json", "blocking"]
+optional = true
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+optional = true
+
+[dependencies.serde_json]
+version = "1"
+optional = true
