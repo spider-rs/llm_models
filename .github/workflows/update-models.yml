@@ -21,6 +21,9 @@ jobs:
       - name: Run model updater
         run: cargo run --bin update-models --features updater
 
+      - name: Run tests
+        run: cargo test
+
       - name: Validate generated models
         id: validate
         run: |
@@ -31,6 +34,17 @@ jobs:
             exit 1
           fi
           echo "Validation passed: found approximately $VISION_COUNT model entries"
+
+      - name: Regression check
+        run: |
+          OLD_COUNT=$(git show HEAD:src/generated.rs | grep -c '"' || echo "0")
+          NEW_COUNT=$(grep -c '"' src/generated.rs || echo "0")
+          THRESHOLD=$((OLD_COUNT * 80 / 100))
+          if [ "$NEW_COUNT" -lt "$THRESHOLD" ]; then
+            echo "::error::Model count regression: $OLD_COUNT -> $NEW_COUNT"
+            exit 1
+          fi
+          echo "Regression check passed: $OLD_COUNT -> $NEW_COUNT"
 
       - name: Check for changes
         id: changes
@@ -47,7 +61,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add src/generated.rs
-          git commit -m "chore: update model lists from OpenRouter API"
+          git commit -m "chore: update model lists from OpenRouter, LiteLLM, and Arena"
           git push
 
       - name: Bump version and publish
