@@ -1,6 +1,6 @@
 [package]
 name = "llm_models_spider"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["j-mendez <jeff@spider.cloud>"]
 description = "Auto-updated registry of LLM model capabilities (vision, audio, etc.)"
 repository = "https://github.com/spider-rs/llm_models"

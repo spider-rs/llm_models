@@ -134,39 +134,32 @@ impl ModelCapabilities {
 
     /// Lookup capabilities by model ID or name.
     ///
-    /// Matches against the full model ID first, then tries partial matching.
+    /// Merges data from MODEL_INFO, generated lists, and pattern matching
+    /// to provide the most accurate capabilities.
     pub fn lookup(model: &str) -> Option<Self> {
         let lower = model.to_lowercase();
 
-        // Try MODEL_INFO first for richer data
-        if let Some(info) = lookup_model_info(&lower) {
-            return Some(Self {
-                vision: info.supports_vision,
-                audio: info.supports_audio,
-                video: info.supports_video,
-                file: info.supports_pdf,
-            });
-        }
+        // Start with MODEL_INFO data if available
+        let info = lookup_model_info(&lower);
 
-        // Check vision models first (more specific)
-        if is_in_list(&lower, VISION_MODELS) {
-            // Check if it's also an audio model
-            let audio = is_in_list(&lower, AUDIO_MODELS);
-            return Some(Self {
-                vision: true,
-                audio,
-                video: audio, // Usually audio models also support video
-                file: audio,
-            });
-        }
+        // Check vision: MODEL_INFO OR VISION_MODELS list OR pattern
+        let vision = info.map_or(false, |i| i.supports_vision)
+            || is_in_list(&lower, VISION_MODELS)
+            || supports_vision_by_pattern(&lower);
 
-        // Check text-only models
-        if is_in_list(&lower, TEXT_ONLY_MODELS) {
-            return Some(Self::text_only());
-        }
+        // Check audio: MODEL_INFO OR AUDIO_MODELS list
+        let audio = info.map_or(false, |i| i.supports_audio)
+            || is_in_list(&lower, AUDIO_MODELS);
 
-        // Fallback to pattern matching for unknown models
-        None
+        // Video and PDF come only from MODEL_INFO
+        let video = info.map_or(false, |i| i.supports_video);
+        let file = info.map_or(false, |i| i.supports_pdf);
+
+        if info.is_some() || vision || audio || is_in_list(&lower, TEXT_ONLY_MODELS) {
+            Some(Self { vision, audio, video, file })
+        } else {
+            None
+        }
     }
 }
 
@@ -269,15 +262,18 @@ pub fn supports_vision(model: &str) -> bool {
 
     // Check MODEL_INFO first
     if let Some(info) = lookup_model_info(&lower) {
-        return info.supports_vision;
+        if info.supports_vision {
+            return true;
+        }
+        // MODEL_INFO may have incomplete vision data from merge; check other sources
     }
 
-    // Check the generated list
+    // Check the generated VISION_MODELS list
     if is_in_list(&lower, VISION_MODELS) {
         return true;
     }
 
-    // Fallback to pattern matching for models not in the list
+    // Fallback to pattern matching for models not in any list
     supports_vision_by_pattern(&lower)
 }
 
@@ -286,7 +282,10 @@ pub fn supports_audio(model: &str) -> bool {
     let lower = model.to_lowercase();
 
     if let Some(info) = lookup_model_info(&lower) {
-        return info.supports_audio;
+        if info.supports_audio {
+            return true;
+        }
+        // MODEL_INFO may have incomplete audio data from merge; check other sources
     }
 
     is_in_list(&lower, AUDIO_MODELS)
@@ -294,24 +293,7 @@ pub fn supports_audio(model: &str) -> bool {
 
 /// Check if a model is text-only (no vision/audio).
 pub fn is_text_only(model: &str) -> bool {
-    let lower = model.to_lowercase();
-
-    if let Some(info) = lookup_model_info(&lower) {
-        return !info.supports_vision && !info.supports_audio && !info.supports_video;
-    }
-
-    // If it's in vision or audio lists, it's not text-only
-    if is_in_list(&lower, VISION_MODELS) || is_in_list(&lower, AUDIO_MODELS) {
-        return false;
-    }
-
-    // If it's in the text-only list, it's definitely text-only
-    if is_in_list(&lower, TEXT_ONLY_MODELS) {
-        return true;
-    }
-
-    // Unknown model - assume text-only unless pattern suggests otherwise
-    !supports_vision_by_pattern(&lower)
+    !supports_vision(model) && !supports_audio(model)
 }
 
 /// Lookup a model in MODEL_INFO using binary search with substring fallback.
@@ -506,5 +488,29 @@ mod tests {
                 window[1].name
             );
         }
+    }
+
+    #[test]
+    fn test_supports_vision_qwen_vl() {
+        // Qwen VL models should be detected as vision even if MODEL_INFO data is incomplete
+        assert!(supports_vision("qwen2-vl-72b"));
+        assert!(supports_vision("qwen2.5-vl-7b"));
+        assert!(supports_vision("qwen-vl-max"));
+        assert!(supports_vision("QWEN2-VL"));
+    }
+
+    #[test]
+    fn test_supports_vision_case_insensitive() {
+        assert!(supports_vision("GPT-4O"));
+        assert!(supports_vision("Claude-3-Sonnet"));
+        assert!(supports_vision("Gemini-2.0-Flash"));
+    }
+
+    #[test]
+    fn test_capabilities_merge_sources() {
+        // Even if MODEL_INFO has vision=false for a VL model, the VISION_MODELS list should win
+        let caps = ModelCapabilities::lookup("qwen2-vl-72b");
+        assert!(caps.is_some());
+        assert!(caps.unwrap().vision);
     }
 }
