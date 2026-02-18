@@ -51,8 +51,18 @@ jobs:
         run: |
           if git diff --quiet src/generated.rs; then
             echo "changed=false" >> $GITHUB_OUTPUT
+            echo "new_models=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
+            # Check if any new model entries were added (added lines containing quoted strings)
+            NEW_ENTRIES=$(git diff src/generated.rs | grep '^+.*"' | grep -v '^+++' | wc -l | tr -d ' ')
+            if [ "$NEW_ENTRIES" -gt 0 ]; then
+              echo "new_models=true" >> $GITHUB_OUTPUT
+              echo "Found $NEW_ENTRIES new model entries"
+            else
+              echo "new_models=false" >> $GITHUB_OUTPUT
+              echo "No new model entries (only removals or metadata changes)"
+            fi
           fi
 
       - name: Commit and push changes
@@ -65,7 +75,7 @@ jobs:
           git push
 
       - name: Bump version and publish
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.new_models == 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
